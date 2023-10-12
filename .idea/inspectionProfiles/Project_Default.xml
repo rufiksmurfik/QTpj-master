@@ -1,0 +1,18 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="main.traceback" />
+          <option value="pygame.sprite.Sprite.pos_x" />
+          <option value="pygame.sprite.Sprite.pos_y" />
+          <option value="pygame.sprite.Sprite.type" />
+          <option value="pygame.sprite.Sprite.new_x" />
+          <option value="pygame.sprite.Sprite.new_y" />
+          <option value="pygame.sprite.Sprite.posts" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
