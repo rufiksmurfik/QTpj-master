@@ -31,7 +31,7 @@ def count_formula(id):
         worked_days = 0
     return ", ".join(list(map(str, [cum_time, time_worked_on_week, worked_days, worked_weeks, premia_nakapalo])))
 
-gr
+
 import sqlite3
 
 def add_employee(id, name, surname, age, phone_number,gender, salary):
