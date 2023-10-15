@@ -1,98 +1,145 @@
+import sys
 import sqlite3
-import uuid
-import random
 
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QVBoxLayout, QLabel, QLineEdit
 
+# Функция для расчета премии на основе времени работы
 def count_premia(time_worked_on_week):
     if time_worked_on_week > 40:
         return 800 * (time_worked_on_week - 40)
-
     if time_worked_on_week < 25:
         return 'уволен'
-def count_formula(id):
+
+# Функция для расчета премии и обновления данных в базе
+def count_formula(id, exit_time):
+    con = sqlite3.connect("maindb.db")
+    cur = con.cursor()
+
     cum_time, time_worked_on_week, worked_days, worked_weeks, premia_nakapalo = list(
         cur.execute(f"SELECT * from worktime where id={id}").fetchall()[0][1:])
-    exit_time = time_to_float(input("введите время ухода"))
+
     time_worked_on_week += exit_time - cum_time
     worked_days += 1
-    if worked_days == 5:
-        print("канец нидили")
-        prem = count_premia(time_worked_on_week)
-        if prem == "уволен":
-            print("сотрудник увольняется! увольте вручную")
-        else:
-            premia_nakapalo += prem
-            time_worked_on_week = 0
 
+    if worked_days == 5:
+        print("конец недели")
+        premia = count_premia(time_worked_on_week)
+        if premia == "уволен":
+            print("сотрудник увольняется!")
+        else:
+            premia_nakapalo += premia
+            time_worked_on_week = 0
             worked_weeks += 1
+
             if worked_weeks == 4:
                 print("выдайте премию и зарплату!")
                 worked_weeks = 0
+
         worked_days = 0
-    return ", ".join(list(map(str, [cum_time, time_worked_on_week, worked_days, worked_weeks, premia_nakapalo])))
+
+    # Обновляем данные в базе
+    cur.execute(f"UPDATE worktime SET cum_time = {exit_time}, time_worked_on_week = {time_worked_on_week}, "
+                f"worked_days = {worked_days}, worked_weeks = {worked_weeks}, premia_nakapalo = {premia_nakapalo} "
+                f"WHERE id = {id}")
+    con.commit()
 
 
-import sqlite3
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
 
-def add_employee(id, name, surname, age, phone_number,gender, salary):
-    try:
-        con = sqlite3.connect("maindb.db")
-        cur = con.cursor()
-        cur.execute("INSERT INTO main_sotrud (id, name, surname, age, phone_number, gender, salary) VALUES (?, ?, ?, ?, ?, ?, ?)", (id, name, surname, age, phone_number, gender, salary))
-        con.commit()
-        print("Сотрудник успешно добавлен в базу данных.")
-        print(f"ID добавленного сотрудника: {id}")
-    except sqlite3.Error as e:
-        print(f"Ошибка базы данных: {e}")
-    finally:
-        con.close()
+    def initUI(self):
+        self.setGeometry(100, 100, 400, 300)
+        self.setWindowTitle('Учет рабочего времени')
+        self.setWindowIcon(QIcon('icon.png'))
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        layout = QVBoxLayout()
+
+        self.add_employee_button = QPushButton('Добавить сотрудника')
+        self.add_employee_button.clicked.connect(self.openAddEmployeeWindow)
+
+        self.work_time_button = QPushButton('Ввод времени работы')
+        self.work_time_button.clicked.connect(self.openWorkTimeWindow)
+
+        layout.addWidget(self.add_employee_button)
+        layout.addWidget(self.work_time_button)
+
+        central_widget.setLayout(layout)
+
+    def openAddEmployeeWindow(self):
+        self.add_employee_window = AddEmployeeWindow()
+        self.add_employee_window.show()
+
+    def openWorkTimeWindow(self):
+        self.work_time_window = WorkTimeWindow()
+        self.work_time_window.show()
+
+class AddEmployeeWindow(QWidget):
+    def __init__(self):
+        super().__init()
+        self.initUI()
+    def initUI(self):
+        self.setGeometry(200, 200, 400, 300)
+        self.setWindowTitle('Добавить сотрудника')
 
 
-def time_to_float(time):
-    time = time.split(":")
-    return int(time[0]) + int(time[1]) / 60
+class WorkTimeWindow(QWidget):
+    def __init__(self):
+        super().__init()
+        self.initUI()
 
+    def initUI(self):
+        self.setGeometry(300, 300, 400, 300)
+        self.setWindowTitle('Ввод времени работы')
 
+        layout = QVBoxLayout()
 
-con = sqlite3.connect("maindb.db")
-cur = con.cursor()
-for i in cur.execute("SELECT id, name, surname, salary from main_sotrud"):
-    for j in i:
-        print(j, end=" ")
-    print()
-while True:
-    deyst = int(input("1 - сотрудник пришел, 2 - сотрудник ушел, 3 - добавить рабочего \n"))
-    if deyst == 1:
-        id = input("введите id сотрудника: ")
-        if id.isdigit() == False:
-            raise Exception("ID cant be text")
-        if int(id) > 999999 or int(id) < 100000:
-            raise Exception("ID не может быть больше 999999 и меньше 100000")
+        self.id_label = QLabel("ID сотрудника:")
+        self.id_input = QLineEdit()
+
+        self.time_label = QLabel("Время ухода (в формате HH:MM):")
+        self.time_input = QLineEdit()
+
+        self.calculate_button = QPushButton("Рассчитать премию")
+        self.result_label = QLabel()
+
+        layout.addWidget(self.id_label)
+        layout.addWidget(self.id_input)
+        layout.addWidget(self.time_label)
+        layout.addWidget(self.time_input)
+        layout.addWidget(self.calculate_button)
+        layout.addWidget(self.result_label)
+
+        self.calculate_button.clicked.connect(self.calculate_premia)
+
+        self.setLayout(layout)
+
+    def calculate_premia(self):
+        id = self.id_input.text()
+        time = self.time_input.text()
+
+        if not id.isdigit() or int(id) < 100000 or int(id) > 999999:
+            self.result_label.setText("Некорректный ID сотрудника.")
+            return
 
         try:
-            needed_values = ", ".join(list(map(str, list(cur.execute(f"SELECT time_worked_on_week, worked_days, worked_weeks, premia_nakapalo from worktime where id={id}").fetchall()[0]))))
-        except IndexError:
-            needed_values = "0, 0, 0, 0"
-        cur.execute(f"INSERT OR REPLACE into worktime (id, cum_time, time_worked_on_week, worked_days, worked_weeks, premia_nakapalo) VALUES ({id}, {str(time_to_float(input('введите время')))}, {needed_values})")
-        con.commit()
-    if deyst == 2:
-        id = input("введите id: ")
-        if id.isdigit() == False:
-            raise ValueError("ID cant be text")
-        if int(id) > 999999 or int(id) < 100000:
-            raise Exception("ID не может быть больше 999999 и меньше 100000")
-        cur.execute(f"INSERT OR REPLACE into worktime (id, cum_time, time_worked_on_week, worked_days, worked_weeks, premia_nakapalo) VALUES ({id}, {count_formula(id)})")
-        con.commit()
+            time_parts = time.split(":")
+            exit_time = int(time_parts[0]) + int(time_parts[1]) / 60
+        except ValueError:
+            self.result_label.setText("Некорректное время.")
+            return
 
-    if deyst == 3:
-        id = random.randint(100000, 999999)
-        name = input("Имя: ")
-        surname = input("Фамилия: ")
-        age = input("Сколько лет: ")
-        phone_number = input("Номер телефона: ")
-        gender = input("Пол: Мужской, Женский \n")
-        salary = input("Зарплата: ")
-        if salary.isdigit() == False:
-            raise Exception('Введите число')
-        add_employee(id, name, surname, age, phone_number,gender, salary)
+        count_formula(int(id), exit_time)
+        self.result_label.setText("Расчет премии выполнен.")
 
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    mainWin = MainWindow()
+    mainWin.show()
+    sys.exit(app.exec_())
