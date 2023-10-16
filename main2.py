@@ -155,11 +155,7 @@ class AddEmployeeWindow(QWidget):
         try:
             con = sqlite3.connect("maindb.db")
             cur = con.cursor()
-
-            # Генерируем уникальный ID для нового сотрудника
             id = random.randint(100000, 999999)
-
-            # Вставляем данные о сотруднике в базу данных
             cur.execute("INSERT INTO main_sotrud (id, name, surname, age, phone_number, gender, salary) "
                         "VALUES (?, ?, ?, ?, ?, ?, ?)", (id, name, surname, age, phone_number, gender, salary))
             con.commit()
